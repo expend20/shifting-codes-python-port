@@ -21,14 +21,19 @@ QTabWidget::pane {
 }
 QTabBar::tab {
     background-color: #2d2d2d;
-    color: #d4d4d4;
+    color: #969696;
     padding: 6px 16px;
     border: 1px solid #3c3c3c;
     border-bottom: none;
 }
 QTabBar::tab:selected {
     background-color: #1e1e1e;
-    border-bottom: 2px solid #569cd6;
+    color: #ffffff;
+    border-top: 2px solid #569cd6;
+    border-bottom: none;
+}
+QTabBar::tab:hover:!selected {
+    color: #d4d4d4;
 }
 QPushButton {
     background-color: #0e639c;
@@ -56,9 +61,12 @@ QStatusBar {
 }
 QSplitter::handle {
     background-color: #3c3c3c;
+    width: 1px;
+    height: 1px;
+    margin: 2px;
 }
 QListWidget::item {
-    padding: 3px;
+    padding: 1px 3px;
 }
 QListWidget::item:selected {
     background-color: #264f78;
@@ -161,9 +169,12 @@ QStatusBar {
 }
 QSplitter::handle {
     background-color: #c8c8c8;
+    width: 1px;
+    height: 1px;
+    margin: 2px;
 }
 QListWidget::item {
-    padding: 3px;
+    padding: 1px 3px;
 }
 QListWidget::item:selected {
     background-color: #add6ff;
@@ -235,6 +246,31 @@ LIGHT_SYNTAX = {
     "comment": "#008000",
 }
 
+# C/C++ syntax highlighting colors per theme
+DARK_C_SYNTAX = {
+    "keyword": "#569CD6",
+    "control": "#C586C0",
+    "type": "#4EC9B0",
+    "number": "#B5CEA8",
+    "string": "#CE9178",
+    "function": "#DCDCAA",
+    "comment": "#6A9955",
+    "preprocessor": "#9B9B4F",
+    "annotation": "#4FC1FF",
+}
+
+LIGHT_C_SYNTAX = {
+    "keyword": "#0000FF",
+    "control": "#AF00DB",
+    "type": "#267F99",
+    "number": "#098658",
+    "string": "#A31515",
+    "function": "#795E26",
+    "comment": "#008000",
+    "preprocessor": "#6F4E37",
+    "annotation": "#0078D4",
+}
+
 # Diff highlight colors per theme
 DARK_DIFF = {
     "removed": QColor(80, 30, 30),
@@ -244,4 +280,19 @@ DARK_DIFF = {
 LIGHT_DIFF = {
     "removed": QColor(255, 220, 220),
     "added": QColor(220, 255, 220),
+}
+
+# Run output colors per theme
+DARK_RUN = {
+    "success": QColor("#4ec9b0"),
+    "error": QColor("#f44747"),
+    "info": QColor("#569cd6"),
+    "text": QColor("#d4d4d4"),
+}
+
+LIGHT_RUN = {
+    "success": QColor("#098658"),
+    "error": QColor("#cd3131"),
+    "info": QColor("#0078d4"),
+    "text": QColor("#1e1e1e"),
 }

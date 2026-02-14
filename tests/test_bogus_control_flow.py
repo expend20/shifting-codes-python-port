@@ -9,7 +9,7 @@ from shifting_codes.utils.crypto import CryptoRandom
 
 
 def test_bcf_adds_bogus_blocks(ctx, rng):
-    """BCF should add new basic blocks with opaque predicates."""
+    """BCF should split blocks, clone body, and add bogus branches."""
     with ctx.create_module("test") as mod:
         make_add_function(ctx, mod)
         func = mod.get_function("add")
@@ -19,11 +19,18 @@ def test_bcf_adds_bogus_blocks(ctx, rng):
         p = BogusControlFlowPass(rng=rng)
         changed = p.run_on_function(func, ctx)
 
-        # add function has only one block with a ret, no unconditional br
-        # so BCF should NOT transform it
-        assert not changed
+        # add function has one block with add+ret — BCF splits into
+        # head/body/tail and clones body, so it SHOULD be transformed
+        assert changed
+
+        blocks_after = len(list(func.basic_blocks))
+        assert blocks_after > blocks_before
 
         assert mod.verify(), mod.get_verification_error()
+
+        ir = mod.to_string()
+        assert "__bcf_x_" in ir
+        assert "bcf.clone" in ir
 
 
 def test_bcf_transforms_unconditional_branches(ctx, rng):

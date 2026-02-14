@@ -1,4 +1,4 @@
-"""Before/After side-by-side diff view with highlighted changes."""
+"""Output tab view with obfuscated IR output, unified diff, and build log."""
 
 from __future__ import annotations
 
@@ -6,23 +6,18 @@ import difflib
 
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QColor, QFont, QTextFormat
-from PyQt6.QtWidgets import (
-    QHBoxLayout,
-    QPlainTextEdit,
-    QSplitter,
-    QTabWidget,
-    QTextEdit,
-    QWidget,
-)
+from PyQt6.QtWidgets import QPlainTextEdit, QTabWidget, QTextEdit, QWidget
 
-from shifting_codes.ui.ir_editor import IREditor, LLVMIRHighlighter
-from shifting_codes.ui.theme import DARK_DIFF, DARK_SYNTAX
-
-from PyQt6.QtWidgets import QLabel, QVBoxLayout as _QVBoxLayout
+from shifting_codes.ui.ir_editor import IREditor
+from shifting_codes.ui.run_output import RunOutputPanel
+from shifting_codes.ui.theme import DARK_DIFF
 
 
-class DiffEditor(QPlainTextEdit):
-    """Read-only text editor that can highlight specific lines with background colors."""
+class UnifiedDiffEditor(QPlainTextEdit):
+    """Read-only editor that displays unified diff with colored lines."""
+
+    # Maximum lines to show in the diff to keep the UI responsive.
+    MAX_DIFF_LINES = 5000
 
     def __init__(self, parent: QWidget | None = None):
         super().__init__(parent)
@@ -32,166 +27,110 @@ class DiffEditor(QPlainTextEdit):
         self.setTabStopDistance(40)
         self.setLineWrapMode(QPlainTextEdit.LineWrapMode.NoWrap)
         self.setReadOnly(True)
-        self._highlighter = LLVMIRHighlighter(self.document())
-        self._line_colors: dict[int, QColor] = {}
+        self._diff_colors = DARK_DIFF
 
-    def set_line_colors(self, colors: dict[int, QColor]):
-        self._line_colors = colors
+    def set_diff_colors(self, colors: dict[str, QColor]):
+        self._diff_colors = colors
+        # Reapply highlights if there's content
+        if self.document().blockCount() > 1:
+            self._apply_highlights()
+
+    def show_diff(self, before: str, after: str):
+        """Compute and display a unified diff."""
+        a_lines = before.splitlines(keepends=True)
+        b_lines = after.splitlines(keepends=True)
+
+        diff_lines = list(difflib.unified_diff(
+            a_lines, b_lines,
+            fromfile="original", tofile="obfuscated",
+            n=3,
+        ))
+
+        truncated = False
+        if len(diff_lines) > self.MAX_DIFF_LINES:
+            diff_lines = diff_lines[:self.MAX_DIFF_LINES]
+            truncated = True
+
+        text = "".join(diff_lines)
+        if truncated:
+            text += f"\n... (diff truncated at {self.MAX_DIFF_LINES} lines)\n"
+
+        if not text.strip():
+            text = "(no differences)"
+
+        self.setPlainText(text)
         self._apply_highlights()
 
-    def set_syntax_colors(self, colors: dict[str, str]):
-        self._highlighter.set_colors(colors)
-
     def _apply_highlights(self):
+        removed_bg = self._diff_colors["removed"]
+        added_bg = self._diff_colors["added"]
+
         selections = []
         block = self.document().begin()
-        line = 0
         while block.isValid():
-            if line in self._line_colors:
+            line = block.text()
+            color = None
+            if line.startswith("-") and not line.startswith("---"):
+                color = removed_bg
+            elif line.startswith("+") and not line.startswith("+++"):
+                color = added_bg
+
+            if color is not None:
                 sel = QTextEdit.ExtraSelection()
-                sel.format.setBackground(self._line_colors[line])
+                sel.format.setBackground(color)
                 sel.format.setProperty(QTextFormat.Property.FullWidthSelection, True)
                 sel.cursor = self.textCursor()
                 sel.cursor.setPosition(block.position())
                 selections.append(sel)
+
             block = block.next()
-            line += 1
         self.setExtraSelections(selections)
 
 
-class SideBySideDiff(QWidget):
-    """Side-by-side diff view with synchronized scrolling."""
-
-    def __init__(self, parent: QWidget | None = None):
-        super().__init__(parent)
-        layout = QHBoxLayout(self)
-        layout.setContentsMargins(0, 0, 0, 0)
-
-        splitter = QSplitter(Qt.Orientation.Horizontal)
-
-        left_panel = QWidget()
-        left_layout = _QVBoxLayout(left_panel)
-        left_layout.setContentsMargins(0, 0, 0, 0)
-        left_layout.setSpacing(2)
-        left_layout.addWidget(QLabel("Original"))
-        self._left = DiffEditor()
-        left_layout.addWidget(self._left)
-
-        right_panel = QWidget()
-        right_layout = _QVBoxLayout(right_panel)
-        right_layout.setContentsMargins(0, 0, 0, 0)
-        right_layout.setSpacing(2)
-        right_layout.addWidget(QLabel("Obfuscated"))
-        self._right = DiffEditor()
-        right_layout.addWidget(self._right)
-
-        splitter.addWidget(left_panel)
-        splitter.addWidget(right_panel)
-        splitter.setSizes([500, 500])
-        layout.addWidget(splitter)
-
-        self._left.verticalScrollBar().valueChanged.connect(
-            self._right.verticalScrollBar().setValue
-        )
-        self._right.verticalScrollBar().valueChanged.connect(
-            self._left.verticalScrollBar().setValue
-        )
-
-        self._diff_colors = DARK_DIFF
-        self._before = ""
-        self._after = ""
-
-    def set_diff_colors(self, diff_colors: dict[str, QColor]):
-        self._diff_colors = diff_colors
-        if self._before or self._after:
-            self.set_diff(self._before, self._after)
-
-    def set_syntax_colors(self, colors: dict[str, str]):
-        self._left.set_syntax_colors(colors)
-        self._right.set_syntax_colors(colors)
-
-    def set_diff(self, before: str, after: str):
-        self._before = before
-        self._after = after
-        left_lines, right_lines, left_colors, right_colors = _compute_side_by_side(
-            before, after, self._diff_colors
-        )
-        self._left.setPlainText("\n".join(left_lines))
-        self._right.setPlainText("\n".join(right_lines))
-        self._left.set_line_colors(left_colors)
-        self._right.set_line_colors(right_colors)
-
-
-def _compute_side_by_side(
-    before: str, after: str, diff_colors: dict[str, QColor]
-) -> tuple[list[str], list[str], dict[int, QColor], dict[int, QColor]]:
-    """Compute aligned side-by-side lines with color maps."""
-    a_lines = before.splitlines()
-    b_lines = after.splitlines()
-
-    removed_bg = diff_colors["removed"]
-    added_bg = diff_colors["added"]
-
-    matcher = difflib.SequenceMatcher(None, a_lines, b_lines)
-
-    left: list[str] = []
-    right: list[str] = []
-    left_colors: dict[int, QColor] = {}
-    right_colors: dict[int, QColor] = {}
-
-    for tag, i1, i2, j1, j2 in matcher.get_opcodes():
-        if tag == "equal":
-            for i in range(i2 - i1):
-                left.append(a_lines[i1 + i])
-                right.append(b_lines[j1 + i])
-        elif tag == "replace":
-            a_chunk = i2 - i1
-            b_chunk = j2 - j1
-            pairs = max(a_chunk, b_chunk)
-            for k in range(pairs):
-                row = len(left)
-                has_left = k < a_chunk
-                has_right = k < b_chunk
-                left.append(a_lines[i1 + k] if has_left else "")
-                right.append(b_lines[j1 + k] if has_right else "")
-                if has_left:
-                    left_colors[row] = removed_bg
-                if has_right:
-                    right_colors[row] = added_bg
-        elif tag == "delete":
-            for k in range(i2 - i1):
-                row = len(left)
-                left.append(a_lines[i1 + k])
-                right.append("")
-                left_colors[row] = removed_bg
-        elif tag == "insert":
-            for k in range(j2 - j1):
-                row = len(left)
-                left.append("")
-                right.append(b_lines[j1 + k])
-                right_colors[row] = added_bg
-
-    return left, right, left_colors, right_colors
-
-
 class DiffView(QTabWidget):
-    """Tabbed view showing Output and side-by-side Diff of IR."""
+    """Tabbed view showing Output IR, Diff, and Build Log."""
 
     def __init__(self, parent: QWidget | None = None):
         super().__init__(parent)
 
         self._after = IREditor(readonly=True)
-        self._side_by_side = SideBySideDiff()
+        self._diff_editor = UnifiedDiffEditor()
+        self._run_output = RunOutputPanel()
 
         self.addTab(self._after, "Output")
-        self.addTab(self._side_by_side, "Diff")
+        self.addTab(self._diff_editor, "Diff")
+        self.addTab(self._run_output, "Build Log")
+
+        # Lazy diff: only compute when the tab is shown
+        self._before = ""
+        self._after_text = ""
+        self._diff_dirty = False
+        self.currentChanged.connect(self._on_tab_changed)
+
+    @property
+    def run_output(self) -> RunOutputPanel:
+        return self._run_output
+
+    def show_run_tab(self):
+        self.setCurrentWidget(self._run_output)
 
     def set_both(self, before: str, after: str):
         self._after.setPlainText(after)
-        self._side_by_side.set_diff(before, after)
-        self.setCurrentIndex(1)
+        self._before = before
+        self._after_text = after
+        self._diff_dirty = True
+        self.setCurrentIndex(0)
 
-    def set_theme(self, syntax_colors: dict[str, str], diff_colors: dict[str, QColor]):
+    def set_theme(self, syntax_colors: dict[str, str],
+                  diff_colors: dict[str, QColor] | None = None,
+                  run_colors: dict[str, QColor] | None = None):
         self._after.set_syntax_colors(syntax_colors)
-        self._side_by_side.set_syntax_colors(syntax_colors)
-        self._side_by_side.set_diff_colors(diff_colors)
+        if diff_colors:
+            self._diff_editor.set_diff_colors(diff_colors)
+        if run_colors:
+            self._run_output.set_run_colors(run_colors)
+
+    def _on_tab_changed(self, index: int):
+        if self.widget(index) is self._diff_editor and self._diff_dirty:
+            self._diff_editor.show_diff(self._before, self._after_text)
+            self._diff_dirty = False

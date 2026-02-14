@@ -4,16 +4,27 @@ from __future__ import annotations
 
 from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtWidgets import (
+    QCheckBox,
     QHBoxLayout,
     QListWidget,
     QListWidgetItem,
     QPushButton,
+    QStyle,
+    QStyledItemDelegate,
     QVBoxLayout,
     QWidget,
 )
 
 from shifting_codes.passes import PassRegistry
 from shifting_codes.passes.base import FunctionPass, ModulePass
+
+
+class _NoFocusDelegate(QStyledItemDelegate):
+    """Item delegate that suppresses the focus rectangle."""
+
+    def paint(self, painter, option, index):
+        option.state &= ~QStyle.StateFlag.State_HasFocus
+        super().paint(painter, option, index)
 
 
 class PassSelector(QWidget):
@@ -23,17 +34,27 @@ class PassSelector(QWidget):
 
     def __init__(self, parent: QWidget | None = None):
         super().__init__(parent)
+        self._updating_select_all = False
         self._setup_ui()
         self._populate()
 
     def _setup_ui(self):
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(2)
+
+        self._select_all = QCheckBox("Select All")
+        self._select_all.stateChanged.connect(self._on_select_all_changed)
+        layout.addWidget(self._select_all)
 
         self._list = QListWidget()
+        self._list.setItemDelegate(_NoFocusDelegate(self._list))
+        self._list.itemChanged.connect(self._on_item_changed)
         layout.addWidget(self._list)
 
         btn_layout = QHBoxLayout()
+        btn_layout.setSpacing(6)
+        btn_layout.setContentsMargins(0, 4, 0, 0)
         self._up_btn = QPushButton("Move Up")
         self._down_btn = QPushButton("Move Down")
         self._apply_btn = QPushButton("Apply Selected Passes")
@@ -52,8 +73,23 @@ class PassSelector(QWidget):
     def _display_name(name: str) -> str:
         return name.replace("_", " ").title()
 
+    # Preferred display order for passes in the UI.
+    _PASS_ORDER = [
+        "global_encryption",
+        "bogus_control_flow",
+        "indirect_call",
+        "mba_obfuscation",
+        "flattening",
+        "substitution",
+    ]
+
     def _populate(self):
-        for name, pass_cls in PassRegistry.all_passes().items():
+        all_passes = PassRegistry.all_passes()
+        # Show passes in the preferred order, then any new/unknown ones.
+        ordered = [n for n in self._PASS_ORDER if n in all_passes]
+        ordered += [n for n in all_passes if n not in self._PASS_ORDER]
+        for name in ordered:
+            pass_cls = all_passes[name]
             info = pass_cls.info()
             item = QListWidgetItem(self._display_name(info.name))
             item.setFlags(item.flags() | Qt.ItemFlag.ItemIsUserCheckable)
@@ -95,3 +131,31 @@ class PassSelector(QWidget):
             if item.checkState() == Qt.CheckState.Checked:
                 result.append(item.data(Qt.ItemDataRole.UserRole))
         return result
+
+    def _on_select_all_changed(self, state):
+        if self._updating_select_all:
+            return
+        check = Qt.CheckState.Checked if state == Qt.CheckState.Checked.value else Qt.CheckState.Unchecked
+        for i in range(self._list.count()):
+            self._list.item(i).setCheckState(check)
+
+    def _on_item_changed(self):
+        self._sync_select_all()
+
+    def _sync_select_all(self):
+        """Update the Select All checkbox to reflect the list state."""
+        count = self._list.count()
+        if count == 0:
+            return
+        checked = sum(
+            1 for i in range(count)
+            if self._list.item(i).checkState() == Qt.CheckState.Checked
+        )
+        self._updating_select_all = True
+        if checked == count:
+            self._select_all.setCheckState(Qt.CheckState.Checked)
+        elif checked == 0:
+            self._select_all.setCheckState(Qt.CheckState.Unchecked)
+        else:
+            self._select_all.setCheckState(Qt.CheckState.PartiallyChecked)
+        self._updating_select_all = False
