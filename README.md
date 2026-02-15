@@ -1,6 +1,6 @@
 # Shifting Codes
 
-Python port of [Pluto](https://github.com/bluesadi/Pluto) LLVM obfuscation passes using [llvm-nanobind](https://github.com/nicovank/llvm-nanobind) bindings, with a PyQt6 visualization UI.
+Python port of [Pluto](https://github.com/bluesadi/Pluto) LLVM obfuscation passes using [llvm-nanobind](https://github.com/LLVMParty/llvm-nanobind) bindings (fork: [transformation-api](https://github.com/expend20/llvm-nanobind/tree/transformation-api)), with a PyQt6 visualization UI.
 
 ![](assets/UI-showcase.gif)
 
@@ -34,7 +34,7 @@ Six obfuscation passes are available:
 2. **Clone and build llvm-nanobind** as a sibling directory:
 
    ```bash
-   git clone https://github.com/LLVMParty/llvm-nanobind ../llvm-nanobind
+   git clone -b transformation-api https://github.com/expend20/llvm-nanobind ../llvm-nanobind
    cd ../llvm-nanobind
    # Follow llvm-nanobind's build instructions to produce the build/ directory
    cd -
