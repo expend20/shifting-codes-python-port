@@ -38,6 +38,10 @@ import shifting_codes.passes.indirect_branch  # noqa: F401
 import shifting_codes.passes.merge_function  # noqa: F401
 import shifting_codes.passes.alias_access  # noqa: F401
 import shifting_codes.passes.custom_cc  # noqa: F401
+import shifting_codes.passes.bogus_control_flow_pluto  # noqa: F401
+import shifting_codes.passes.global_encryption_pluto  # noqa: F401
+import shifting_codes.passes.indirect_call_pluto  # noqa: F401
+import shifting_codes.passes.flattening_pluto  # noqa: F401
 from shifting_codes.ui.compiler import (
     ExportWorker, check_clang, discover_functions,
 )

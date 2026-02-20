@@ -71,16 +71,26 @@ class PassSelector(QWidget):
 
     @staticmethod
     def _display_name(name: str) -> str:
+        # Strip variant suffixes — the [Pluto]/[Polaris] tag from the
+        # description is appended separately by _populate().
+        for suffix in ("_pluto", "_polaris"):
+            if name.endswith(suffix):
+                name = name[: -len(suffix)]
+                break
         return name.replace("_", " ").title()
 
     # Preferred display order for passes in the UI.
     _PASS_ORDER = [
         "global_encryption",
+        "global_encryption_pluto",
         "bogus_control_flow",
+        "bogus_control_flow_pluto",
         "indirect_call",
+        "indirect_call_pluto",
         "indirect_branch",
         "mba_obfuscation",
         "flattening",
+        "flattening_pluto",
         "substitution",
         "merge_function",
         "alias_access",

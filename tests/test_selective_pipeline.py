@@ -125,6 +125,7 @@ def test_module_pass_ignores_selection(ctx, rng):
         gv = mod.add_global(i32, "secret_value")
         gv.initializer = i32.constant(42)
         gv.linkage = llvm.Linkage.Internal
+        gv.set_constant(True)
 
         # Create a function that uses the global
         fn_ty = ctx.types.function(i32, [])
