@@ -24,7 +24,7 @@ class FlatteningPass(FunctionPass):
     def info(cls) -> PassInfo:
         return PassInfo(
             name="flattening",
-            description="Control flow flattening via switch dispatcher",
+            description="[Pluto] Control flow flattening via switch dispatcher",
         )
 
     def run_on_function(self, func: llvm.Function, ctx: llvm.Context) -> bool:

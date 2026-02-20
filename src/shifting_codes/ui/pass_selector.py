@@ -78,9 +78,13 @@ class PassSelector(QWidget):
         "global_encryption",
         "bogus_control_flow",
         "indirect_call",
+        "indirect_branch",
         "mba_obfuscation",
         "flattening",
         "substitution",
+        "merge_function",
+        "alias_access",
+        "custom_cc",
     ]
 
     def _populate(self):
@@ -91,11 +95,18 @@ class PassSelector(QWidget):
         for name in ordered:
             pass_cls = all_passes[name]
             info = pass_cls.info()
-            item = QListWidgetItem(self._display_name(info.name))
+            label = self._display_name(info.name)
+            # Pull [Pluto]/[Polaris] tag from description if present
+            desc = info.description
+            if desc.startswith("["):
+                tag_end = desc.find("]")
+                if tag_end != -1:
+                    label += "  " + desc[: tag_end + 1]
+            item = QListWidgetItem(label)
             item.setFlags(item.flags() | Qt.ItemFlag.ItemIsUserCheckable)
             item.setCheckState(Qt.CheckState.Unchecked)
             item.setData(Qt.ItemDataRole.UserRole, name)
-            item.setToolTip(info.description)
+            item.setToolTip(desc)
             self._list.addItem(item)
 
     def _move_up(self):

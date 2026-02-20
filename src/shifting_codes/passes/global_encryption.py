@@ -23,7 +23,7 @@ class GlobalEncryptionPass(ModulePass):
     def info(cls) -> PassInfo:
         return PassInfo(
             name="global_encryption",
-            description="XOR-encrypt internal global variables",
+            description="[Pluto] XOR-encrypt internal global variables",
             is_module_pass=True,
         )
 

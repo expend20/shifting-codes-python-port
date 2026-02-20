@@ -23,7 +23,7 @@ class IndirectCallPass(ModulePass):
     def info(cls) -> PassInfo:
         return PassInfo(
             name="indirect_call",
-            description="Replace direct calls with indirect calls via globals",
+            description="[Pluto] Replace direct calls with indirect calls via globals",
             is_module_pass=True,
         )
 

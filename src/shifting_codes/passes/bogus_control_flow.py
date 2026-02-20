@@ -14,6 +14,17 @@ from shifting_codes.passes.base import FunctionPass, PassInfo
 from shifting_codes.utils.crypto import CryptoRandom
 
 
+def _safe_remap_operands(inst, value_map: dict):
+    """Remap operands using try/except for nanobind cross-type __eq__ safety."""
+    for i in range(inst.num_operands):
+        op = inst.get_operand(i)
+        try:
+            if op in value_map:
+                inst.set_operand(i, value_map[op])
+        except TypeError:
+            pass
+
+
 def _clone_basic_block(body_bb: llvm.BasicBlock, func: llvm.Function,
                        ctx: llvm.Context, tag: int) -> llvm.BasicBlock:
     """Clone a basic block's instructions into a new block.
@@ -35,10 +46,7 @@ def _clone_basic_block(body_bb: llvm.BasicBlock, func: llvm.Function,
 
     # Remap operands: replace references to original values with cloned ones
     for inst in clone_bb.instructions:
-        for i in range(inst.num_operands):
-            op = inst.get_operand(i)
-            if op in value_map:
-                inst.set_operand(i, value_map[op])
+        _safe_remap_operands(inst, value_map)
 
     return clone_bb
 
@@ -79,7 +87,7 @@ class BogusControlFlowPass(FunctionPass):
     def info(cls) -> PassInfo:
         return PassInfo(
             name="bogus_control_flow",
-            description="Insert opaque predicates and bogus branches",
+            description="[Pluto] Insert opaque predicates and bogus branches",
         )
 
     def run_on_function(self, func: llvm.Function, ctx: llvm.Context) -> bool:
@@ -113,7 +121,7 @@ class BogusControlFlowPass(FunctionPass):
                 continue
 
             # If block has only a terminator, skip (nothing to split)
-            if first_non_phi.is_terminator_inst:
+            if first_non_phi.is_terminator:
                 continue
 
             # Split: headBB → bodyBB (at first non-PHI)

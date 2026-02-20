@@ -34,6 +34,10 @@ import shifting_codes.passes.indirect_call  # noqa: F401
 import shifting_codes.passes.mba_obfuscation  # noqa: F401
 import shifting_codes.passes.flattening  # noqa: F401
 import shifting_codes.passes.substitution  # noqa: F401
+import shifting_codes.passes.indirect_branch  # noqa: F401
+import shifting_codes.passes.merge_function  # noqa: F401
+import shifting_codes.passes.alias_access  # noqa: F401
+import shifting_codes.passes.custom_cc  # noqa: F401
 from shifting_codes.ui.compiler import (
     ExportWorker, check_clang, discover_functions,
 )
@@ -70,7 +74,7 @@ _SERIAL_DEMO_SOURCE = """\
 extern int printf(const char *, ...);
 
 // @obfuscate
-int check_serial(const char *serial) {
+static int check_serial(const char *serial) {
     // Verify length (expect 19 chars: XXXX-NNNN-XXXX-XXXX)
     int len = 0;
     while (serial[len] != '\\0') len++;
@@ -93,7 +97,7 @@ int check_serial(const char *serial) {
 }
 
 // @obfuscate
-int derive_license_tier(const char *serial) {
+static int derive_license_tier(const char *serial) {
     // Extract the numeric segment (positions 5-8)
     int tier = 0;
     for (int i = 5; i < 9; i++) {

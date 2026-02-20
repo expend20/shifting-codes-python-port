@@ -24,7 +24,7 @@ class SubstitutionPass(FunctionPass):
     def info(cls) -> PassInfo:
         return PassInfo(
             name="substitution",
-            description="Arithmetic instruction substitution (13 Pluto patterns)",
+            description="[Pluto] Arithmetic instruction substitution (13 patterns)",
         )
 
     def run_on_function(self, func: llvm.Function, ctx: llvm.Context) -> bool:

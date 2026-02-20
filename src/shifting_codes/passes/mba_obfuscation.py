@@ -30,7 +30,7 @@ class MBAObfuscationPass(FunctionPass):
     def info(cls) -> PassInfo:
         return PassInfo(
             name="mba_obfuscation",
-            description="Mixed Boolean-Arithmetic obfuscation via Z3",
+            description="[Pluto] Mixed Boolean-Arithmetic obfuscation via Z3",
         )
 
     def run_on_function(self, func: llvm.Function, ctx: llvm.Context) -> bool:
