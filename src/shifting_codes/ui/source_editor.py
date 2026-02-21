@@ -112,7 +112,9 @@ class CHighlighter(QSyntaxHighlighter):
         self._comment_fmt.setForeground(QColor(c["comment"]))
         self._comment_fmt.setFontItalic(True)
 
-    def highlightBlock(self, text: str):
+    def highlightBlock(self, text: str | None):
+        if text is None:
+            return
         # Apply single-line rules
         for pattern, fmt in self._rules:
             it = pattern.globalMatch(text)

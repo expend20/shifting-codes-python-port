@@ -32,7 +32,8 @@ class UnifiedDiffEditor(QPlainTextEdit):
     def set_diff_colors(self, colors: dict[str, QColor]):
         self._diff_colors = colors
         # Reapply highlights if there's content
-        if self.document().blockCount() > 1:
+        doc = self.document()
+        if doc is not None and doc.blockCount() > 1:
             self._apply_highlights()
 
     def show_diff(self, before: str, after: str):

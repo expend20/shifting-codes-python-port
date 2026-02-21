@@ -4,6 +4,7 @@ version = "0.1.0"
 description = "LLVM obfuscation passes ported from Pluto to Python, with PyQt6 visualization"
 requires-python = ">=3.12"
 dependencies = [
+    "llvm-nanobind",
     "z3-solver>=4.12",
     "PyQt6>=6.6",
 ]
@@ -16,7 +17,7 @@ build-backend = "hatchling.build"
 packages = ["src/shifting_codes"]
 
 [tool.uv.sources]
-llvm-nanobind = { path = "../llvm-nanobind", editable = true }
+llvm-nanobind = { git = "https://github.com/expend20/llvm-nanobind" }
 
 [dependency-groups]
 dev = [
@@ -26,4 +27,4 @@ dev = [
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-pythonpath = ["src", "../llvm-nanobind/build"]
+pythonpath = ["src"]

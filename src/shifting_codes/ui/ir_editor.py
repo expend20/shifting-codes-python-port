@@ -84,7 +84,9 @@ class LLVMIRHighlighter(QSyntaxHighlighter):
         comment_fmt.setForeground(QColor(c["comment"]))
         self._rules.append((QRegularExpression(r";.*$"), comment_fmt))
 
-    def highlightBlock(self, text: str):
+    def highlightBlock(self, text: str | None):
+        if text is None:
+            return
         for pattern, fmt in self._rules:
             it = pattern.globalMatch(text)
             while it.hasNext():

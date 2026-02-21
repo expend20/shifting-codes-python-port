@@ -1,0 +1,83 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          enable-cache: true
+
+      # ── Install LLVM (Windows) ──────────────────────────────────────
+      - name: Cache LLVM (Windows)
+        if: runner.os == 'Windows'
+        id: cache-llvm-windows
+        uses: actions/cache@v4
+        with:
+          path: llvm-windows
+          key: llvm-windows-21.1.1-clang-21.1.1
+
+      - name: Install LLVM (Windows)
+        if: runner.os == 'Windows'
+        shell: bash
+        run: |
+          if [ ! -d "llvm-windows/llvm" ]; then
+            mkdir -p llvm-windows
+            curl -sL https://github.com/vovkos/llvm-package-windows/releases/download/llvm-21.1.1/llvm-21.1.1-windows-amd64-msvc17-msvcrt.7z -o llvm-windows/llvm.7z
+            7z x llvm-windows/llvm.7z -ollvm-windows/llvm
+            curl -sL https://github.com/vovkos/llvm-package-windows/releases/download/clang-21.1.1/clang-21.1.1-windows-amd64-msvc17-msvcrt.7z -o llvm-windows/clang.7z
+            7z x llvm-windows/clang.7z -ollvm-windows/llvm -aoa
+            rm -f llvm-windows/llvm.7z llvm-windows/clang.7z
+          fi
+          LLVM_PREFIX=$(ls -d llvm-windows/llvm/llvm-*)
+          echo "CMAKE_PREFIX_PATH=$(cygpath -w "$(pwd)/$LLVM_PREFIX")" >> "$GITHUB_ENV"
+          echo "$(pwd)/$LLVM_PREFIX/bin" >> "$GITHUB_PATH"
+
+      # ── Install LLVM (Linux) ────────────────────────────────────────
+      - name: Install LLVM (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          wget -qO- https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
+          sudo add-apt-repository -y "deb http://apt.llvm.org/$(lsb_release -cs)/ llvm-toolchain-$(lsb_release -cs)-21 main"
+          sudo apt-get update
+          sudo apt-get install -y llvm-21-dev llvm-21-tools clang-21 lld-21
+          echo "CMAKE_PREFIX_PATH=/usr/lib/llvm-21" >> "$GITHUB_ENV"
+
+      # ── Install LLVM (macOS) ────────────────────────────────────────
+      - name: Install LLVM (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          brew install llvm
+          echo "CMAKE_PREFIX_PATH=$(brew --prefix llvm)" >> "$GITHUB_ENV"
+
+      # ── Setup MSVC (Windows) ────────────────────────────────────────
+      - name: Setup MSVC
+        if: runner.os == 'Windows'
+        uses: ilammy/msvc-dev-cmd@v1
+
+      # ── Install dependencies & run tests ────────────────────────────
+      - name: Install dependencies
+        run: uv sync
+
+      - name: Run tests
+        run: uv run pytest tests/ -v

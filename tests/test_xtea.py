@@ -171,11 +171,18 @@ def test_xtea_execution_correctness():
 
     # Determine target triple
     is_windows = platform.system() == "Windows"
+    is_macos = platform.system() == "Darwin"
+    machine = platform.machine()
     if is_windows:
         triple = "x86_64-pc-windows-msvc"
         shared_ext = ".dll"
+    elif is_macos:
+        arch = "arm64" if machine == "arm64" else "x86_64"
+        triple = f"{arch}-apple-darwin"
+        shared_ext = ".dylib"
     else:
-        triple = "x86_64-unknown-linux-gnu"
+        arch = "aarch64" if machine == "aarch64" else "x86_64"
+        triple = f"{arch}-unknown-linux-gnu"
         shared_ext = ".so"
 
     tmpdir = tempfile.mkdtemp()

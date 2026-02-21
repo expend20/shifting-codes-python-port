@@ -13,18 +13,17 @@ class CryptoRandom:
 
     def __init__(self, seed: int | None = None):
         self._seeded = seed is not None
-        if self._seeded:
-            self._rng = random.Random(seed)
-        else:
-            self._rng = None
+        self._rng: random.Random | None = random.Random(seed) if self._seeded else None
 
     def get_uint32(self) -> int:
         if self._seeded:
+            assert self._rng is not None
             return self._rng.getrandbits(32)
         return secrets.randbits(32)
 
     def get_uint64(self) -> int:
         if self._seeded:
+            assert self._rng is not None
             return self._rng.getrandbits(64)
         return secrets.randbits(64)
 
@@ -33,6 +32,7 @@ class CryptoRandom:
         if max_val <= 0:
             return 0
         if self._seeded:
+            assert self._rng is not None
             return self._rng.randrange(max_val)
         return secrets.randbelow(max_val)
 

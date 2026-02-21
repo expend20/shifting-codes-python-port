@@ -21,7 +21,7 @@ Six obfuscation passes are available:
 
 - **Python 3.12+**
 - **[UV](https://docs.astral.sh/uv/)** package manager
-- **llvm-nanobind** — must be cloned and built separately (see below)
+- **LLVM 21** development libraries installed (see [llvm-nanobind](https://github.com/expend20/llvm-nanobind) for platform-specific instructions)
 
 ## Installation
 
@@ -31,21 +31,17 @@ Six obfuscation passes are available:
    pip install uv
    ```
 
-2. **Clone and build llvm-nanobind** as a sibling directory:
-
-   ```bash
-   git clone -b transformation-api https://github.com/expend20/llvm-nanobind ../llvm-nanobind
-   cd ../llvm-nanobind
-   # Follow llvm-nanobind's build instructions to produce the build/ directory
-   cd -
-   ```
-
-   The project expects the built package at `../llvm-nanobind/build/`.
-
-3. **Install the project**:
+2. **Install the project** (builds llvm-nanobind from source automatically):
 
    ```bash
    uv sync
+   ```
+
+   For local development with a local llvm-nanobind checkout, override the source in `pyproject.toml`:
+
+   ```toml
+   [tool.uv.sources]
+   llvm-nanobind = { path = "../llvm-nanobind", editable = true }
    ```
 
 ## Usage

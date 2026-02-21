@@ -24,7 +24,7 @@ python -m uv run python -m shifting_codes.ui.app
 
 ## Dependencies
 
-- **llvm-nanobind**: Local editable dependency at `../llvm-nanobind/build/` (must be built separately before tests/UI work)
+- **llvm-nanobind**: Built from source via git by default; override to local path in `pyproject.toml` for development
 - **z3-solver**: Constraint solving for MBA coefficient generation
 - **PyQt6**: GUI framework (UI not yet tested)
 - Python 3.12+ required, managed with UV + hatchling build backend
