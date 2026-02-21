@@ -92,9 +92,11 @@ class PassSelector(QWidget):
         "flattening",
         "flattening_pluto",
         "substitution",
+        "string_encryption",
         "merge_function",
         "alias_access",
         "custom_cc",
+        "anti_disassembly",
     ]
 
     def _populate(self):

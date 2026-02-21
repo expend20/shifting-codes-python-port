@@ -168,6 +168,7 @@ def test_xtea_execution_correctness():
     llvm.initialize_all_target_mcs()
     llvm.initialize_all_target_infos()
     llvm.initialize_all_asm_printers()
+    llvm.initialize_all_asm_parsers()
 
     # Determine target triple
     is_windows = platform.system() == "Windows"

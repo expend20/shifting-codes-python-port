@@ -1,6 +1,6 @@
 # Shifting Codes
 
-Python port of [Pluto](https://github.com/bluesadi/Pluto) and [Polaris](https://github.com/za233/Polaris-Obfuscator/) LLVM obfuscation passes using [llvm-nanobind](https://github.com/LLVMParty/llvm-nanobind) bindings, with a PyQt6 visualization UI.
+Python port of [Pluto](https://github.com/bluesadi/Pluto), [Polaris](https://github.com/za233/Polaris-Obfuscator/), and [VMwhere](https://github.com/MrRoy09/VMwhere) LLVM obfuscation passes using [llvm-nanobind](https://github.com/LLVMParty/llvm-nanobind) bindings, with a PyQt6 visualization UI.
 
 ![](assets/UI-showcase.gif)
 
@@ -31,6 +31,13 @@ Upgraded versions of four Pluto passes plus four new passes:
 | **Alias Access** | Function | Obscures local variable access through pointer aliasing and multi-level struct indirection |
 | **Custom CC** | Module | Randomly assigns non-standard calling conventions to internal functions |
 | **Merge Function** | Module | Merges multiple functions into a single switch-based dispatcher |
+
+### [VMwhere](https://github.com/MrRoy09/VMwhere) (2 passes)
+
+| Pass | Type | Description |
+|------|------|-------------|
+| **String Encryption** | Module | XOR-encrypts string constant globals (`[N x i8]`) with per-function stack-local decryption at runtime |
+| **Anti-Disassembly** | Function | Injects crafted x86 inline assembly that desynchronizes linear-sweep disassemblers (IDA, Ghidra, objdump) |
 
 ## Prerequisites
 
@@ -115,6 +122,23 @@ pipeline.add(IndirectBranchPass(rng=rng))
 pipeline.add(AliasAccessPass(rng=rng))
 pipeline.add(CustomCCPass(rng=rng))
 pipeline.add(MergeFunctionPass(rng=rng))
+
+pipeline.run(mod, ctx)
+```
+
+VMwhere passes:
+
+```python
+from shifting_codes.passes import PassPipeline
+from shifting_codes.passes.string_encryption import StringEncryptionPass
+from shifting_codes.passes.anti_disassembly import AntiDisassemblyPass
+from shifting_codes.utils.crypto import CryptoRandom
+
+rng = CryptoRandom(seed=42)
+
+pipeline = PassPipeline()
+pipeline.add(StringEncryptionPass(rng=rng))
+pipeline.add(AntiDisassemblyPass(rng=rng, density=0.3))  # density: 0.0-1.0
 
 pipeline.run(mod, ctx)
 ```

@@ -42,6 +42,8 @@ import shifting_codes.passes.bogus_control_flow_pluto  # noqa: F401
 import shifting_codes.passes.global_encryption_pluto  # noqa: F401
 import shifting_codes.passes.indirect_call_pluto  # noqa: F401
 import shifting_codes.passes.flattening_pluto  # noqa: F401
+import shifting_codes.passes.string_encryption  # noqa: F401
+import shifting_codes.passes.anti_disassembly  # noqa: F401
 from shifting_codes.ui.compiler import (
     ExportWorker, check_clang, discover_functions,
 )

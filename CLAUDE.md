@@ -4,19 +4,23 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project
 
-Python port of Pluto LLVM obfuscation passes using llvm-nanobind bindings. Six passes transform LLVM IR to obfuscate code: Substitution, MBA Obfuscation, Bogus Control Flow, Flattening, Global Encryption, and Indirect Call.
+Python port of Pluto, Polaris, and VMwhere LLVM obfuscation passes using llvm-nanobind bindings. Passes transform LLVM IR to obfuscate code. See README.md for the full pass list.
 
 ## Commands
 
+**Always use `uv` to run tests** — never use the system Python directly. The system Python may have a different llvm-nanobind build with incompatible API (e.g. `is_terminator` vs `is_terminator_inst`). Only `uv run` uses the correct project venv.
+
+llvm-nanobind requires LLVM dev headers to build. Set `CMAKE_PREFIX_PATH` to your LLVM installation if `uv sync` fails to find LLVM (CI does this automatically).
+
 ```bash
-# Run all tests
-python -m uv run pytest tests/ -v
+# Run all tests (always use this form)
+CMAKE_PREFIX_PATH="C:\llvm\clang+llvm-21.1.0-x86_64-pc-windows-msvc" python -m uv run pytest tests/ -v
 
 # Run a single test file
-python -m uv run pytest tests/test_substitution.py -v
+CMAKE_PREFIX_PATH="C:\llvm\clang+llvm-21.1.0-x86_64-pc-windows-msvc" python -m uv run pytest tests/test_substitution.py -v
 
 # Run a single test by name
-python -m uv run pytest tests/test_substitution.py -k "test_add_substitution" -v
+CMAKE_PREFIX_PATH="C:\llvm\clang+llvm-21.1.0-x86_64-pc-windows-msvc" python -m uv run pytest tests/test_substitution.py -k "test_add_substitution" -v
 
 # Run UI (requires llvm-nanobind built)
 python -m uv run python -m shifting_codes.ui.app
@@ -42,14 +46,14 @@ pipeline.add(SubstitutionPass(rng=CryptoRandom(seed=42)))
 pipeline.run(mod, ctx)
 ```
 
-**FunctionPasses:** Substitution, MBAObfuscation, BogusControlFlow, Flattening
-**ModulePasses:** GlobalEncryption, IndirectCall
+**FunctionPasses:** Substitution, MBAObfuscation, BogusControlFlow, Flattening, IndirectBranch, AliasAccess, AntiDisassembly
+**ModulePasses:** GlobalEncryption, IndirectCall, CustomCC, MergeFunction, StringEncryption
 
 ### Utilities (`src/shifting_codes/utils/`)
 
 - **`crypto.py`** — `CryptoRandom`: wraps `secrets` (production) or `random.Random(seed)` (testing). All passes accept an `rng` parameter for determinism.
 - **`mba.py`** — Z3-based MBA coefficient generation with result caching. Generates linear (15 truth tables) and univariate polynomial expressions.
-- **`ir_helpers.py`** — PHI/register demotion to stack (`demote_phi_to_stack`, `demote_regs_to_stack`), used by Flattening pass.
+- **`ir_helpers.py`** — PHI/register demotion to stack (`demote_phi_to_stack`, `demote_regs_to_stack`), shared encryption utilities (`build_decrypt_function`, `encrypt_bytes`).
 
 ### XTEA (`src/shifting_codes/xtea/`)
 
@@ -60,6 +64,16 @@ Reference XTEA cipher implementation (pure Python) plus an LLVM IR builder that 
 - `ctx`: Fresh LLVM context per test
 - `rng`: Seeded `CryptoRandom(seed=42)` for deterministic tests
 - Helper functions: `make_add_function()`, `make_arith_function()`, `make_branch_function()`, `make_loop_function()`
+
+## Maintenance Rules
+
+- **Keep README.md up to date.** When adding new passes, changing pass behavior, or making other significant changes, update the README pass tables, usage examples, and any other affected sections. The README is the public-facing documentation and must accurately reflect the current state of the project.
+
+## Testing Policy
+
+- **All tests pass on CI. There are no pre-existing test failures.** If tests fail after your changes, your changes broke them — investigate and fix. Never assume failures are pre-existing.
+- **Always run tests via `uv run`**, not the system Python. The system Python has a different llvm-nanobind with incompatible API names.
+- Test helper imports use `from conftest import ...` (not `from tests.conftest import ...`).
 
 ## llvm-nanobind API Pitfalls
 

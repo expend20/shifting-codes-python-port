@@ -14,8 +14,9 @@ import llvm
 from shifting_codes.passes import PassRegistry
 from shifting_codes.passes.base import ModulePass, PassInfo
 from shifting_codes.utils.crypto import CryptoRandom
-
-KEY_LEN = 4
+from shifting_codes.utils.ir_helpers import (
+    KEY_LEN, build_decrypt_function, encrypt_bytes,
+)
 
 
 def _type_byte_size(ty: llvm.Type) -> int | None:
@@ -27,66 +28,6 @@ def _type_byte_size(ty: llvm.Type) -> int | None:
         if elem.kind == llvm.TypeKind.Integer:
             return (elem.int_width // 8) * ty.array_length
     return None
-
-
-def _encrypt_bytes(orig_val: int, byte_size: int, key: int,
-                   byte_offset: int = 0) -> int:
-    """XOR integer value byte-by-byte with 4-byte key (cyclic)."""
-    key_bytes = (key & 0xFFFFFFFF).to_bytes(4, 'little')
-    val_bytes = bytearray(orig_val.to_bytes(byte_size, 'little', signed=False))
-    for i in range(byte_size):
-        val_bytes[i] ^= key_bytes[(byte_offset + i) % KEY_LEN]
-    return int.from_bytes(val_bytes, 'little')
-
-
-def _build_decrypt_function(mod: llvm.Module, ctx: llvm.Context) -> llvm.Function:
-    """Build: void @__obfu_globalenc_dec(ptr %data, ptr %key, i64 %len, i64 %keyLen)
-
-    Loop body: data[i] ^= key[i % keyLen]
-    """
-    i8 = ctx.types.i8
-    i64 = ctx.types.i64
-    ptr = ctx.types.ptr
-    fn_ty = ctx.types.function(ctx.types.void, [ptr, ptr, i64, i64])
-    func = mod.add_function("__obfu_globalenc_dec", fn_ty)
-    func.linkage = llvm.Linkage.Private
-
-    entry_bb = func.append_basic_block("entry")
-    cmp_bb = func.append_basic_block("cmp")
-    body_bb = func.append_basic_block("body")
-    end_bb = func.append_basic_block("end")
-
-    data = func.get_param(0)
-    key = func.get_param(1)
-    length = func.get_param(2)
-    key_len = func.get_param(3)
-
-    with entry_bb.create_builder() as b:
-        i_ptr = b.alloca(i64, name="i")
-        b.store(i64.constant(0), i_ptr)
-        b.br(cmp_bb)
-
-    with cmp_bb.create_builder() as b:
-        iv = b.load(i64, i_ptr, "iv")
-        cond = b.icmp(llvm.IntPredicate.SLT, iv, length, "cmp")
-        b.cond_br(cond, body_bb, end_bb)
-
-    with body_bb.create_builder() as b:
-        iv = b.load(i64, i_ptr, "iv")
-        key_idx = b.srem(iv, key_len, "kidx")
-        key_ptr = b.gep(i8, key, [key_idx], "kptr")
-        key_byte = b.load(i8, key_ptr, "kbyte")
-        data_ptr = b.gep(i8, data, [iv], "dptr")
-        data_byte = b.load(i8, data_ptr, "dbyte")
-        dec = b.xor(key_byte, data_byte, "dec")
-        b.store(dec, data_ptr)
-        b.store(b.add(iv, i64.constant(1), "inc"), i_ptr)
-        b.br(cmp_bb)
-
-    with end_bb.create_builder() as b:
-        b.ret_void()
-
-    return func
 
 
 def _is_encryptable_global(gv) -> bool:
@@ -154,7 +95,7 @@ class GlobalEncryptionPass(ModulePass):
             return False
 
         # Phase 2: Build shared decrypt helper
-        decrypt_func = _build_decrypt_function(mod, ctx)
+        decrypt_func = build_decrypt_function(mod, ctx)
 
         i32 = ctx.types.i32
         i64 = ctx.types.i64
@@ -188,7 +129,7 @@ class GlobalEncryptionPass(ModulePass):
             try:
                 if vtype.kind == llvm.TypeKind.Integer:
                     orig_val = init.const_zext_value
-                    enc_val = _encrypt_bytes(orig_val, byte_size, key)
+                    enc_val = encrypt_bytes(orig_val, byte_size, key)
                     gv.initializer = vtype.constant(enc_val)
                 elif vtype.kind == llvm.TypeKind.Array:
                     elem_type = vtype.element_type
@@ -199,7 +140,7 @@ class GlobalEncryptionPass(ModulePass):
                     for j in range(elem_count):
                         elem = init.get_aggregate_element(j)
                         orig_val = elem.const_zext_value
-                        enc_val = _encrypt_bytes(orig_val, elem_size, key,
+                        enc_val = encrypt_bytes(orig_val, elem_size, key,
                                                  byte_offset)
                         enc_elements.append(enc_val)
                         byte_offset += elem_size

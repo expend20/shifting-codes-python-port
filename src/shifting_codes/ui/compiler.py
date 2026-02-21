@@ -257,6 +257,7 @@ def compile_ir(ir_text: str, tmpdir: str) -> CompileResult:
         llvm.initialize_all_target_mcs()
         llvm.initialize_all_target_infos()
         llvm.initialize_all_asm_printers()
+        llvm.initialize_all_asm_parsers()
 
         # Parse IR and emit object file
         with llvm.create_context() as ctx:
@@ -397,6 +398,7 @@ def export_object(ir_text: str, output_path: str) -> ExportResult:
         llvm.initialize_all_target_mcs()
         llvm.initialize_all_target_infos()
         llvm.initialize_all_asm_printers()
+        llvm.initialize_all_asm_parsers()
 
         with llvm.create_context() as ctx:
             with ctx.parse_ir(ir_text) as mod:

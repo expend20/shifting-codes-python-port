@@ -1,6 +1,69 @@
-"""IR helper functions: PHI demotion, register demotion, collectors."""
+"""IR helper functions: PHI demotion, register demotion, collectors, encryption."""
 
 import llvm
+
+KEY_LEN = 4
+
+
+def encrypt_bytes(orig_val: int, byte_size: int, key: int,
+                  byte_offset: int = 0) -> int:
+    """XOR integer value byte-by-byte with 4-byte key (cyclic)."""
+    key_bytes = (key & 0xFFFFFFFF).to_bytes(4, 'little')
+    val_bytes = bytearray(orig_val.to_bytes(byte_size, 'little', signed=False))
+    for i in range(byte_size):
+        val_bytes[i] ^= key_bytes[(byte_offset + i) % KEY_LEN]
+    return int.from_bytes(val_bytes, 'little')
+
+
+def build_decrypt_function(mod: llvm.Module, ctx: llvm.Context,
+                           name: str = "__obfu_globalenc_dec") -> llvm.Function:
+    """Build: void @<name>(ptr %data, ptr %key, i64 %len, i64 %keyLen)
+
+    Loop body: data[i] ^= key[i % keyLen]
+    """
+    i8 = ctx.types.i8
+    i64 = ctx.types.i64
+    ptr = ctx.types.ptr
+    fn_ty = ctx.types.function(ctx.types.void, [ptr, ptr, i64, i64])
+    func = mod.add_function(name, fn_ty)
+    func.linkage = llvm.Linkage.Private
+
+    entry_bb = func.append_basic_block("entry")
+    cmp_bb = func.append_basic_block("cmp")
+    body_bb = func.append_basic_block("body")
+    end_bb = func.append_basic_block("end")
+
+    data = func.get_param(0)
+    key = func.get_param(1)
+    length = func.get_param(2)
+    key_len = func.get_param(3)
+
+    with entry_bb.create_builder() as b:
+        i_ptr = b.alloca(i64, name="i")
+        b.store(i64.constant(0), i_ptr)
+        b.br(cmp_bb)
+
+    with cmp_bb.create_builder() as b:
+        iv = b.load(i64, i_ptr, "iv")
+        cond = b.icmp(llvm.IntPredicate.SLT, iv, length, "cmp")
+        b.cond_br(cond, body_bb, end_bb)
+
+    with body_bb.create_builder() as b:
+        iv = b.load(i64, i_ptr, "iv")
+        key_idx = b.srem(iv, key_len, "kidx")
+        key_ptr = b.gep(i8, key, [key_idx], "kptr")
+        key_byte = b.load(i8, key_ptr, "kbyte")
+        data_ptr = b.gep(i8, data, [iv], "dptr")
+        data_byte = b.load(i8, data_ptr, "dbyte")
+        dec = b.xor(key_byte, data_byte, "dec")
+        b.store(dec, data_ptr)
+        b.store(b.add(iv, i64.constant(1), "inc"), i_ptr)
+        b.br(cmp_bb)
+
+    with end_bb.create_builder() as b:
+        b.ret_void()
+
+    return func
 
 
 def demote_phi_to_stack(func: llvm.Function) -> None:

@@ -105,6 +105,11 @@ wheels = [
 ]
 
 [[package]]
+name = "llvm-nanobind"
+version = "0.0.1"
+source = { git = "https://github.com/expend20/llvm-nanobind#5600f16eed8cb027dcbacadaa63a956d7a044f21" }
+
+[[package]]
 name = "packaging"
 version = "26.0"
 source = { registry = "https://pypi.org/simple" }
@@ -219,6 +224,7 @@ name = "shifting-codes"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [
+    { name = "llvm-nanobind" },
     { name = "pyqt6" },
     { name = "z3-solver" },
 ]
@@ -231,6 +237,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
+    { name = "llvm-nanobind", git = "https://github.com/expend20/llvm-nanobind" },
     { name = "pyqt6", specifier = ">=6.6" },
     { name = "z3-solver", specifier = ">=4.12" },
 ]
