@@ -65,9 +65,20 @@ class FunctionSelector(QWidget):
         """
         self._list.clear()
         for name in names:
-            item = QListWidgetItem(name)
+            # VM interpreter created by VirtualizationPass — always check it
+            # so subsequent passes obfuscate it automatically.
+            is_vm = name.startswith("__vm_")
+            display = f"{name}  [VM interpreter]" if is_vm else name
+            item = QListWidgetItem(display)
+            item.setData(Qt.ItemDataRole.UserRole, name)
             item.setFlags(item.flags() | Qt.ItemFlag.ItemIsUserCheckable)
-            if annotated_names is None:
+            if is_vm:
+                item.setCheckState(Qt.CheckState.Checked)
+                item.setToolTip(
+                    "Created by VirtualizationPass — select obfuscation "
+                    "passes and apply again to harden the interpreter"
+                )
+            elif annotated_names is None:
                 item.setCheckState(Qt.CheckState.Checked)
             elif name in annotated_names or any(
                 ann in name for ann in annotated_names
@@ -86,7 +97,10 @@ class FunctionSelector(QWidget):
         for i in range(self._list.count()):
             item = self._list.item(i)
             if item.checkState() == Qt.CheckState.Checked:
-                result.add(item.text())
+                # Use stored name (UserRole) which is the real IR name,
+                # falling back to display text for backwards compat.
+                name = item.data(Qt.ItemDataRole.UserRole) or item.text()
+                result.add(name)
         return result
 
     def _on_select_all_changed(self, state):

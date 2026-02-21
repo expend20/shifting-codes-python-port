@@ -30,7 +30,7 @@ class PlutoGlobalEncryptionPass(ModulePass):
             is_module_pass=True,
         )
 
-    def run_on_module(self, mod: llvm.Module, ctx: llvm.Context) -> bool:
+    def run_on_module(self, mod: llvm.Module, ctx: llvm.Context, selected_functions: set[str] | None = None) -> bool:
         int_mods = []   # (gv, enc_val, key)
         arr_mods = []   # (gv, encrypted_elements, key, elem_type, elem_count)
 

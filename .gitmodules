@@ -1,0 +1,3 @@
+[submodule "vendor/riscy-business"]
+	path = vendor/riscy-business
+	url = https://github.com/thesecretclub/riscy-business

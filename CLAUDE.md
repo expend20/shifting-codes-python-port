@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project
 
-Python port of Pluto, Polaris, and VMwhere LLVM obfuscation passes using llvm-nanobind bindings. Passes transform LLVM IR to obfuscate code. See README.md for the full pass list.
+Python port of Pluto, Polaris, riscy-business, and VMwhere LLVM obfuscation passes using llvm-nanobind bindings. Passes transform LLVM IR to obfuscate code. See README.md for the full pass list.
 
 ## Commands
 
@@ -89,3 +89,13 @@ Reference XTEA cipher implementation (pure Python) plus an LLVM IR builder that 
 - ConstantDataArray element access via `get_operand()` crashes — avoid array encryption
 - PHI nodes need `inst.add_incoming(value, pred_bb)` when new predecessors are added
 - Z3 non-determinism: bound coefficients (`-10 <= X[i] <= 10`) and set `smt.random_seed`
+
+## Canonical URLs
+
+Do not hallucinate these — use exactly as written:
+
+- **ShiftingCodes**: https://github.com/expend20/shifting-codes-python-port
+- **Pluto**: https://github.com/bluesadi/Pluto
+- **Polaris-Obfuscator** (by za233, NOT bluesadi): https://github.com/za233/Polaris-Obfuscator
+- **llvm-nanobind** (NOT github.com/llvm-nanobind/...): https://github.com/LLVMParty/llvm-nanobind
+- **RISC-Y Business VM**: https://github.com/thesecretclub/riscy-business

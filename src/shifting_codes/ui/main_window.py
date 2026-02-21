@@ -44,6 +44,7 @@ import shifting_codes.passes.indirect_call_pluto  # noqa: F401
 import shifting_codes.passes.flattening_pluto  # noqa: F401
 import shifting_codes.passes.string_encryption  # noqa: F401
 import shifting_codes.passes.anti_disassembly  # noqa: F401
+import shifting_codes.passes.virtualization  # noqa: F401
 from shifting_codes.ui.compiler import (
     ExportWorker, check_clang, discover_functions,
 )
@@ -58,89 +59,8 @@ from shifting_codes.ui.theme import (
     DARK_C_SYNTAX, DARK_DIFF, DARK_RUN, DARK_STYLESHEET, DARK_SYNTAX,
     LIGHT_C_SYNTAX, LIGHT_DIFF, LIGHT_RUN, LIGHT_STYLESHEET, LIGHT_SYNTAX,
 )
+from shifting_codes.samples import get_serial_checker_source
 from shifting_codes.utils.crypto import CryptoRandom
-
-
-# ---------------------------------------------------------------------------
-# Demo C source — serial number checker
-# ---------------------------------------------------------------------------
-
-_SERIAL_DEMO_SOURCE = """\
-// Serial Number Checker -- Obfuscation Demo
-//
-// Functions marked with @obfuscate are pre-selected for obfuscation.
-// Try applying Substitution + MBA + Bogus Control Flow, then Compile & Run
-// or Export to see the result.
-//
-// Valid serial numbers for testing:
-//   SHFT-0500-CODE-XRAY   (Basic tier)
-//   DEMO-2500-LLVM-PASS   (Pro tier)
-//   PROD-7000-OBFS-KEYS   (Enterprise tier)
-
-extern int printf(const char *, ...);
-
-// @obfuscate
-static int check_serial(const char *serial) {
-    // Verify length (expect 19 chars: XXXX-NNNN-XXXX-XXXX)
-    int len = 0;
-    while (serial[len] != '\\0') len++;
-    if (len != 19) return 0;
-
-    // Check dashes at positions 4, 9, 14
-    if (serial[4] != '-' || serial[9] != '-' || serial[14] != '-')
-        return 0;
-
-    // Compute a weighted checksum over all characters
-    unsigned int sum = 0;
-    for (int i = 0; i < 19; i++) {
-        sum = sum * 31 + (unsigned char)serial[i];
-    }
-
-    // Accept if checksum matches any known product key
-    return sum == 0x3EE56CB4u   // SHFT-0500-CODE-XRAY
-        || sum == 0x3952CB47u   // DEMO-2500-LLVM-PASS
-        || sum == 0xF36594C3u;  // PROD-7000-OBFS-KEYS
-}
-
-// @obfuscate
-static int derive_license_tier(const char *serial) {
-    // Extract the numeric segment (positions 5-8)
-    int tier = 0;
-    for (int i = 5; i < 9; i++) {
-        char c = serial[i];
-        if (c < '0' || c > '9') return -1;
-        tier = tier * 10 + (c - '0');
-    }
-    if (tier < 1000) return 0;       // Basic
-    if (tier < 5000) return 1;       // Pro
-    return 2;                         // Enterprise
-}
-
-static const char *tier_name(int tier) {
-    if (tier == 0) return "Basic";
-    if (tier == 1) return "Pro";
-    if (tier == 2) return "Enterprise";
-    return "Unknown";
-}
-
-int main(int argc, char **argv) {
-    if (argc != 2) {
-        printf("Usage: serial_check <ABCD-1234-EFGH-5678>\\n");
-        return 1;
-    }
-
-    const char *serial = argv[1];
-
-    if (!check_serial(serial)) {
-        printf("Invalid serial number.\\n");
-        return 1;
-    }
-
-    int tier = derive_license_tier(serial);
-    printf("Serial accepted -- license tier: %s\\n", tier_name(tier));
-    return 0;
-}
-"""
 
 
 class PassWorker(QThread):
@@ -363,18 +283,24 @@ class MainWindow(QMainWindow):
         """Populate both tabs: source view and compiled IR."""
         self._source_text = source_text
         self._annotated_names = annotated_names
+        self._original_ir = ir_text
+        self._obfuscated_ir = None
         self._source_editor.setPlainText(source_text)
         self._ir_editor.setPlainText(ir_text)
         self._populate_function_selector(ir_text, annotated_names)
+        self._build_btn.setEnabled(bool(ir_text))
         self._input_tabs.setCurrentWidget(self._source_editor)
 
     def _load_ir_only(self, ir_text: str):
         """Load IR without C source — switch to IR tab."""
         self._source_text = None
         self._annotated_names = None
+        self._original_ir = ir_text
+        self._obfuscated_ir = None
         self._source_editor.clear()
         self._ir_editor.setPlainText(ir_text)
         self._populate_function_selector(ir_text)
+        self._build_btn.setEnabled(bool(ir_text))
         self._input_tabs.setCurrentWidget(self._ir_editor)
 
     # ----- Load files -----
@@ -451,15 +377,17 @@ class MainWindow(QMainWindow):
 
     def _apply_passes(self, pass_list: list[tuple[str, type]]):
         if not pass_list:
-            self._status_bar.showMessage("No passes selected")
+            self._obfuscated_ir = None
+            self._diff_view.set_both(self._original_ir, self._original_ir)
+            self._build_btn.setEnabled(bool(self._original_ir))
+            self._status_bar.showMessage("No passes selected — showing original IR")
             return
 
-        ir_text = self._ir_editor.toPlainText().strip()
+        ir_text = self._original_ir
         if not ir_text:
             self._status_bar.showMessage("No IR input")
             return
 
-        self._original_ir = ir_text
         self._status_bar.showMessage("Running passes...")
         self._pass_selector.setEnabled(False)
 
@@ -476,6 +404,7 @@ class MainWindow(QMainWindow):
     def _on_passes_done(self, result_ir: str, elapsed: float):
         self._obfuscated_ir = result_ir
         self._diff_view.set_both(self._original_ir, result_ir)
+
         self._status_bar.showMessage(f"Done in {elapsed:.3f}s — module verified OK")
         self._pass_selector.setEnabled(True)
         self._build_btn.setEnabled(True)
@@ -569,7 +498,7 @@ class MainWindow(QMainWindow):
 
     def _load_serial_demo(self):
         """Compile the embedded serial-checker C source and load it."""
-        source = _SERIAL_DEMO_SOURCE
+        source = get_serial_checker_source()
         annotations = parse_annotations(source)
         annotated_names = {a.name for a in annotations if a.annotated} or None
 

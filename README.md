@@ -1,6 +1,6 @@
 # Shifting Codes
 
-Python port of [Pluto](https://github.com/bluesadi/Pluto), [Polaris](https://github.com/za233/Polaris-Obfuscator/), and [VMwhere](https://github.com/MrRoy09/VMwhere) LLVM obfuscation passes using [llvm-nanobind](https://github.com/LLVMParty/llvm-nanobind) bindings, with a PyQt6 visualization UI.
+Python port of [Pluto](https://github.com/bluesadi/Pluto), [Polaris](https://github.com/za233/Polaris-Obfuscator/), [riscy-business](https://github.com/thesecretclub/riscy-business), and [VMwhere](https://github.com/MrRoy09/VMwhere) LLVM obfuscation passes using [llvm-nanobind](https://github.com/LLVMParty/llvm-nanobind) bindings, with a PyQt6 visualization UI.
 
 ![](assets/UI-showcase.gif)
 
@@ -38,6 +38,12 @@ Upgraded versions of four Pluto passes plus four new passes:
 |------|------|-------------|
 | **String Encryption** | Module | XOR-encrypts string constant globals (`[N x i8]`) with per-function stack-local decryption at runtime |
 | **Anti-Disassembly** | Function | Injects crafted x86 inline assembly that desynchronizes linear-sweep disassemblers (IDA, Ghidra, objdump) |
+
+### [riscy-business](https://github.com/thesecretclub/riscy-business) (1 pass)
+
+| Pass | Type | Description |
+|------|------|-------------|
+| **Virtualization** | Module | Translates functions to RISC-V inspired bytecode and replaces them with an embedded interpreter (Phase 1: integer arithmetic) |
 
 ## Prerequisites
 
@@ -143,6 +149,21 @@ pipeline.add(AntiDisassemblyPass(rng=rng, density=0.3))  # density: 0.0-1.0
 pipeline.run(mod, ctx)
 ```
 
+Virtualization pass (riscy-business):
+
+```python
+from shifting_codes.passes import PassPipeline
+from shifting_codes.passes.virtualization import VirtualizationPass
+from shifting_codes.utils.crypto import CryptoRandom
+
+rng = CryptoRandom(seed=42)
+
+pipeline = PassPipeline()
+pipeline.add(VirtualizationPass(rng=rng))
+
+pipeline.run(mod, ctx)
+```
+
 Passes are registered via `@PassRegistry.register` and can be looked up by name:
 
 ```python
@@ -177,9 +198,12 @@ python -m uv run python -m shifting_codes.ui.app
 
 ```
 src/shifting_codes/
-  passes/          # Obfuscation passes (base classes, registry, pipeline)
-  utils/           # Shared utilities (crypto RNG, MBA solver, IR helpers)
-  xtea/            # XTEA cipher — pure Python reference + LLVM IR builder
-  ui/              # PyQt6 GUI for visualizing pass transformations
-tests/             # pytest test suite
+  passes/            # Obfuscation passes (base classes, registry, pipeline)
+  utils/             # Shared utilities (crypto RNG, MBA solver, IR helpers)
+  riscybusiness_vm/  # RISC-V VM: ISA definition, bytecode compiler, interpreter builder
+  xtea/              # XTEA cipher — pure Python reference + LLVM IR builder
+  ui/                # PyQt6 GUI for visualizing pass transformations
+vendor/
+  riscy-business/    # Git submodule — RISC-V VM reference (opcodes, encryption, shuffling)
+tests/               # pytest test suite
 ```

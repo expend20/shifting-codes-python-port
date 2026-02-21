@@ -204,7 +204,9 @@ def test_xtea_execution_correctness():
                 mod.target_triple = triple
 
                 target = llvm.get_target_from_triple(triple)
-                tm = llvm.create_target_machine(target, triple, "generic", "")
+                reloc = llvm.RelocMode.PIC if not is_windows else llvm.RelocMode.Default
+                tm = llvm.create_target_machine(target, triple, "generic", "",
+                                                reloc_mode=reloc)
                 tm.emit_to_file(mod, obj_path, llvm.CodeGenFileType.ObjectFile)
 
         # Compile to shared library

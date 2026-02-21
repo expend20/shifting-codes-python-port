@@ -59,7 +59,7 @@ class StringEncryptionPass(ModulePass):
             is_module_pass=True,
         )
 
-    def run_on_module(self, mod: llvm.Module, ctx: llvm.Context) -> bool:
+    def run_on_module(self, mod: llvm.Module, ctx: llvm.Context, selected_functions: set[str] | None = None) -> bool:
         # Phase 1: Discover string globals via module globals scan
         # Collect all encryptable string globals first
         string_globals: dict[str, llvm.GlobalVariable] = {}

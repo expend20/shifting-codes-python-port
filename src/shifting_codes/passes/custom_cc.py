@@ -39,7 +39,7 @@ class CustomCCPass(ModulePass):
             is_module_pass=True,
         )
 
-    def run_on_module(self, mod: llvm.Module, ctx: llvm.Context) -> bool:
+    def run_on_module(self, mod: llvm.Module, ctx: llvm.Context, selected_functions: set[str] | None = None) -> bool:
         # Collect internal/private functions with bodies
         internal_funcs = []
         for func in mod.functions:

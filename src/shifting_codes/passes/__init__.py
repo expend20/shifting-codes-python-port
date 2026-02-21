@@ -53,15 +53,14 @@ class PassPipeline:
         Args:
             mod: The LLVM module to transform.
             ctx: The LLVM context.
-            selected_functions: If None, all functions receive FunctionPasses.
-                If a set, only named functions receive FunctionPasses.
-                ModulePasses always apply to the entire module regardless.
+            selected_functions: If None, all functions are eligible.
+                If a set, only named functions are transformed.
         """
         changed = False
         obfuscated_functions: set[str] = set()
         for p in self.passes:
             if isinstance(p, ModulePass):
-                changed |= p.run_on_module(mod, ctx)
+                changed |= p.run_on_module(mod, ctx, selected_functions)
             elif isinstance(p, FunctionPass):
                 for func in mod.functions:
                     if func.is_declaration:

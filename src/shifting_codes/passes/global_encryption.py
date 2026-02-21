@@ -69,7 +69,7 @@ class GlobalEncryptionPass(ModulePass):
             is_module_pass=True,
         )
 
-    def run_on_module(self, mod: llvm.Module, ctx: llvm.Context) -> bool:
+    def run_on_module(self, mod: llvm.Module, ctx: llvm.Context, selected_functions: set[str] | None = None) -> bool:
         # Phase 1: Discover globals by scanning instruction operands
         # gv_name -> (gv, {func_names}, [(inst, operand_idx, func)])
         gv_info: dict[str, tuple] = {}

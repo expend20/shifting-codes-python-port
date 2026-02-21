@@ -97,6 +97,7 @@ class PassSelector(QWidget):
         "alias_access",
         "custom_cc",
         "anti_disassembly",
+        "virtualization",
     ]
 
     def _populate(self):

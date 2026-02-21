@@ -31,7 +31,7 @@ class IndirectCallPass(ModulePass):
             is_module_pass=True,
         )
 
-    def run_on_module(self, mod: llvm.Module, ctx: llvm.Context) -> bool:
+    def run_on_module(self, mod: llvm.Module, ctx: llvm.Context, selected_functions: set[str] | None = None) -> bool:
         ptr_ty = ctx.types.ptr
         # Use i64 for pointer arithmetic (safe for 64-bit targets)
         ptr_int_ty = ctx.types.i64

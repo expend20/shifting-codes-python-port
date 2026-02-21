@@ -32,8 +32,19 @@ class ModulePass(ABC):
     """Abstract base class for module-level obfuscation passes."""
 
     @abstractmethod
-    def run_on_module(self, mod: llvm.Module, ctx: llvm.Context) -> bool:
-        """Run the pass on the entire module. Returns True if the module was modified."""
+    def run_on_module(
+        self,
+        mod: llvm.Module,
+        ctx: llvm.Context,
+        selected_functions: set[str] | None = None,
+    ) -> bool:
+        """Run the pass on the entire module. Returns True if the module was modified.
+
+        Args:
+            selected_functions: If provided, only these functions should be
+                transformed. Passes that operate on module-level constructs
+                (e.g. global encryption) may ignore this filter.
+        """
         ...
 
     @classmethod

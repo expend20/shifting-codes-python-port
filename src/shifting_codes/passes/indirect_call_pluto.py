@@ -28,7 +28,7 @@ class PlutoIndirectCallPass(ModulePass):
             is_module_pass=True,
         )
 
-    def run_on_module(self, mod: llvm.Module, ctx: llvm.Context) -> bool:
+    def run_on_module(self, mod: llvm.Module, ctx: llvm.Context, selected_functions: set[str] | None = None) -> bool:
         ptr_ty = ctx.types.ptr
 
         # Step 1: Collect internal/private functions with bodies
