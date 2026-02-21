@@ -1,12 +1,12 @@
 # Shifting Codes
 
-Python port of [Pluto](https://github.com/bluesadi/Pluto) LLVM obfuscation passes using [llvm-nanobind](https://github.com/LLVMParty/llvm-nanobind) bindings (fork: [transformation-api](https://github.com/expend20/llvm-nanobind/tree/transformation-api)), with a PyQt6 visualization UI.
+Python port of [Pluto](https://github.com/bluesadi/Pluto) and [Polaris](https://github.com/za233/Polaris-Obfuscator/) LLVM obfuscation passes using [llvm-nanobind](https://github.com/LLVMParty/llvm-nanobind) bindings, with a PyQt6 visualization UI.
 
 ![](assets/UI-showcase.gif)
 
 ## Passes
 
-Six obfuscation passes are available:
+### [Pluto](https://github.com/bluesadi/Pluto) (6 passes)
 
 | Pass | Type | Description |
 |------|------|-------------|
@@ -16,6 +16,21 @@ Six obfuscation passes are available:
 | **Flattening** | Function | Transforms control flow into a switch-based dispatch loop |
 | **Global Encryption** | Module | XOR-encrypts global variable initializers with runtime decryption stubs |
 | **Indirect Call** | Module | Replaces direct function calls with indirect calls through function pointers |
+
+### [Polaris](https://github.com/za233/Polaris-Obfuscator/) (8 passes)
+
+Upgraded versions of four Pluto passes plus four new passes:
+
+| Pass | Type | Description |
+|------|------|-------------|
+| **Bogus Control Flow** | Function | Modular-arithmetic opaque predicates (upgraded from Pluto's trivial predicates) |
+| **Flattening** | Function | Switch-based dispatch with dominance-based state encryption (upgraded from plaintext) |
+| **Global Encryption** | Module | Use-based discovery with per-function decryption via shared helper (upgraded from single-site inline) |
+| **Indirect Call** | Module | Per-call-site globals with add/subtract pointer masking (upgraded from shared GV, no masking) |
+| **Indirect Branch** | Function | Replaces direct branches with indirect jumps through obfuscated jump tables |
+| **Alias Access** | Function | Obscures local variable access through pointer aliasing and multi-level struct indirection |
+| **Custom CC** | Module | Randomly assigns non-standard calling conventions to internal functions |
+| **Merge Function** | Module | Merges multiple functions into a single switch-based dispatcher |
 
 ## Prerequisites
 
@@ -46,8 +61,34 @@ Six obfuscation passes are available:
 
 ## Usage
 
+Pluto passes:
+
 ```python
-import llvm
+from shifting_codes.passes import PassPipeline
+from shifting_codes.passes.substitution import SubstitutionPass
+from shifting_codes.passes.mba_obfuscation import MBAObfuscationPass
+from shifting_codes.passes.bogus_control_flow_pluto import PlutoBogusControlFlowPass
+from shifting_codes.passes.flattening_pluto import PlutoFlatteningPass
+from shifting_codes.passes.global_encryption_pluto import PlutoGlobalEncryptionPass
+from shifting_codes.passes.indirect_call_pluto import PlutoIndirectCallPass
+from shifting_codes.utils.crypto import CryptoRandom
+
+rng = CryptoRandom(seed=42)
+
+pipeline = PassPipeline()
+pipeline.add(SubstitutionPass(rng=rng))
+pipeline.add(MBAObfuscationPass(rng=rng))
+pipeline.add(PlutoBogusControlFlowPass(rng=rng))
+pipeline.add(PlutoFlatteningPass(rng=rng))
+pipeline.add(PlutoGlobalEncryptionPass(rng=rng))
+pipeline.add(PlutoIndirectCallPass(rng=rng))
+
+pipeline.run(mod, ctx)
+```
+
+Polaris passes:
+
+```python
 from shifting_codes.passes import PassPipeline
 from shifting_codes.passes.substitution import SubstitutionPass
 from shifting_codes.passes.mba_obfuscation import MBAObfuscationPass
@@ -55,6 +96,10 @@ from shifting_codes.passes.bogus_control_flow import BogusControlFlowPass
 from shifting_codes.passes.flattening import FlatteningPass
 from shifting_codes.passes.global_encryption import GlobalEncryptionPass
 from shifting_codes.passes.indirect_call import IndirectCallPass
+from shifting_codes.passes.indirect_branch import IndirectBranchPass
+from shifting_codes.passes.alias_access import AliasAccessPass
+from shifting_codes.passes.custom_cc import CustomCCPass
+from shifting_codes.passes.merge_function import MergeFunctionPass
 from shifting_codes.utils.crypto import CryptoRandom
 
 rng = CryptoRandom(seed=42)
@@ -66,8 +111,11 @@ pipeline.add(BogusControlFlowPass(rng=rng))
 pipeline.add(FlatteningPass(rng=rng))
 pipeline.add(GlobalEncryptionPass(rng=rng))
 pipeline.add(IndirectCallPass(rng=rng))
+pipeline.add(IndirectBranchPass(rng=rng))
+pipeline.add(AliasAccessPass(rng=rng))
+pipeline.add(CustomCCPass(rng=rng))
+pipeline.add(MergeFunctionPass(rng=rng))
 
-# Apply to a module
 pipeline.run(mod, ctx)
 ```
 
